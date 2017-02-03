@@ -4,15 +4,14 @@
  * and open the template in the editor.
  */
 
-package mvcmysql.model;
+package mvcdb4o.model;
 
 import com.db4o.Db4oEmbedded;
 import com.db4o.ObjectContainer;
 import com.db4o.ObjectSet;
 import com.db4o.query.Predicate;
+import com.db4o.query.Query;
 import java.io.File;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Comparator;
 /**
@@ -53,7 +52,7 @@ public class Model {
 
     }
     
-    public void insertarActor(String first_name, String last_name){
+    public void insertarActor(String first_name, String last_name, ArrayList<TaulaActors> afins){
         int id=1;
         ObjectSet result=connexio.query(
                 new Predicate<TaulaActors>(){
@@ -65,7 +64,7 @@ public class Model {
                 , ((Comparator)new TaulaActors(0,null,null)).reversed());
         if(result.size()!=0) id=((TaulaActors)result.next()).get1_actor_id()+1;
         try{
-            connexio.store(new TaulaActors(id, first_name, last_name));
+            connexio.store(new TaulaActors(id, first_name, last_name, afins));
         } catch (Exception ex) {
             System.err.println("Error a l'insertar l'actor!!");
         }  
@@ -77,7 +76,16 @@ public class Model {
         TaulaActors exemple=new TaulaActors(actor_id, null, null);
         ObjectSet result=connexio.queryByExample(exemple);
         if(result.size()==1) {
-            connexio.delete(result.next());
+            TaulaActors sentenciat=(TaulaActors)result.next();
+            Query q=connexio.query();
+            q.constrain(TaulaActors.class);
+            q.descend("_4_afins").constrain(sentenciat).contains();
+            ObjectSet<TaulaActors> resultat=q.execute();
+            for(TaulaActors t:resultat){
+                t.get4_afins().remove(sentenciat);
+                connexio.store(t.get4_afins());
+            }
+            connexio.delete(sentenciat);
             System.err.println("Actor borrat correctament!!");
         } else {
             System.err.println("Error al borrar l'actor!!");
@@ -85,7 +93,7 @@ public class Model {
     
     }
     
-    public void modificarActor(int actor_id, String first_name, String last_name){
+    public void modificarActor(int actor_id, String first_name, String last_name, ArrayList<TaulaActors> afins){
 
         TaulaActors exemple=new TaulaActors(actor_id, null, null);
         ObjectSet<TaulaActors> result=connexio.queryByExample(exemple);
@@ -93,6 +101,10 @@ public class Model {
             exemple=result.next();
             exemple.set2_first_name(first_name);
             exemple.set3_last_name(last_name);
+            //Borro al propi actor de la llista d'afins per si un cas l'han posat
+            afins.remove(exemple);
+            exemple.set4_afins(afins);
+
             connexio.store(exemple);
             System.err.println("Actor modificat correctament!!");
         } else {

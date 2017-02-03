@@ -4,8 +4,10 @@
  * and open the template in the editor.
  */
 
-package mvcmysql.model;
+package mvcdb4o.model;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 
 /**
@@ -17,11 +19,27 @@ public class TaulaActors implements Comparator<TaulaActors> {
     private int _1_actor_id;
     private String _2_first_name;
     private String _3_last_name;
+    private Collection<TaulaActors> _4_afins=new ArrayList<>();
+
+    public TaulaActors(int actor_id, String first_name, String last_name, Collection<TaulaActors> afins) {
+        this._1_actor_id = actor_id;
+        this._2_first_name = first_name;
+        this._3_last_name = last_name;
+        this._4_afins = afins;
+    }
 
     public TaulaActors(int actor_id, String first_name, String last_name) {
         this._1_actor_id = actor_id;
         this._2_first_name = first_name;
         this._3_last_name = last_name;
+    }
+
+    public Collection<TaulaActors> get4_afins() {
+        return _4_afins;
+    }
+
+    public void set4_afins(Collection<TaulaActors> _4_afins) {
+        this._4_afins = _4_afins;
     }
 
     
@@ -59,5 +77,11 @@ public class TaulaActors implements Comparator<TaulaActors> {
     public void set1_actor_id(int _1_actor_id) {
         this._1_actor_id = _1_actor_id;
     }
+
+    @Override
+    public String toString() {
+        return _2_first_name + " " + _3_last_name;
+    }
+    
     
 }

@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mvcmysql.controller;
+package mvcdb4o.controller;
 
 import com.db4o.ObjectContainer;
 import java.awt.event.ActionEvent;
@@ -27,6 +27,9 @@ import java.util.Comparator;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListModel;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -34,9 +37,9 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
 import javax.swing.table.TableColumnModel;
 import javax.swing.table.TableModel;
-import mvcmysql.model.Model;
-import mvcmysql.model.TaulaActors;
-import mvcmysql.view.VistaActors;
+import mvcdb4o.model.Model;
+import mvcdb4o.model.TaulaActors;
+import mvcdb4o.view.VistaActors;
 
 /**
  *
@@ -54,7 +57,11 @@ public class Controlador {
     public Controlador(Model odb, VistaActors jf) {
         this.odb = odb;
         this.vista = jf;
-        carregaTaula(odb.llistarActors(), TaulaActors.class);
+        ArrayList<TaulaActors> llista=odb.llistarActors();
+        carregaTaula(llista, TaulaActors.class);
+        vista.getjComboBox1().setModel(new DefaultComboBoxModel(llista.toArray()));
+        vista.getjButton1().setEnabled(false);
+        vista.getjButton2().setEnabled(!llista.isEmpty());
         borrarCamps();
         vista.setVisible(true);
         control();
@@ -64,6 +71,7 @@ public class Controlador {
         //Posem en blanc el nom i cognom de l'actor
         vista.getjTextField1().setText("");
         vista.getjTextField2().setText("");
+        vista.getjList1().setModel(new DefaultListModel());
         nom = cognom = "";
     }
 
@@ -175,6 +183,16 @@ public class Controlador {
         }
     }
 
+    public static boolean hasElement(Object searched, JList list) {
+      for (int a = 0; a < list.getModel().getSize(); a++) {
+         Object element = list.getModel().getElementAt(a);
+         if (element.equals(searched))  {
+            return true;
+         }
+      }
+      return false;
+    }
+    
     public void control() {
 
         ActionListener actionListener = new ActionListener() {
@@ -183,50 +201,99 @@ public class Controlador {
                     if (filasel != -1) {
                         odb.borrarActor(id);
                         borrarCamps();
-                        carregaTaula(odb.llistarActors(), TaulaActors.class);
+                        ArrayList<TaulaActors> llista=odb.llistarActors();
+                        carregaTaula(llista, TaulaActors.class);
+                        vista.getjComboBox1().setModel(new DefaultComboBoxModel(llista.toArray()));
+                        vista.getjButton2().setEnabled(!llista.isEmpty());
                     } else {
                         JOptionPane.showMessageDialog(null, "Per borrar un actor primer l'has de seleccionar!!", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 } else {
                     if (actionEvent.getSource().equals(vista.getjButton5())) {
                         if (!nom.equals("") || !cognom.equals("")) {
-                            odb.insertarActor(nom, cognom);
+                            ArrayList<TaulaActors> afins=new ArrayList<>();
+                            if(vista.getjList1().getModel().getSize()!=0){
+                                DefaultListModel lm=(DefaultListModel)vista.getjList1().getModel();
+                                for (int i = 0; i < lm.getSize(); i++) {
+                                    TaulaActors element = (TaulaActors)lm.getElementAt(i);
+                                    afins.add(element);    
+                                }
+                            }
+                            
+                            odb.insertarActor(nom, cognom, afins);
                             borrarCamps();
-                            carregaTaula(odb.llistarActors(), TaulaActors.class);
+                            ArrayList<TaulaActors> llista=odb.llistarActors();
+                            carregaTaula(llista, TaulaActors.class);
+                            vista.getjComboBox1().setModel(new DefaultComboBoxModel(llista.toArray()));
+                            //Si acabo d'insertar un actor puc activar el botó d'afegir actors afins
+                            vista.getjButton2().setEnabled(true);
                         } else {
                             JOptionPane.showMessageDialog(null, "No pots introduir un actor sense nom ni cognom!!", "Error", JOptionPane.ERROR_MESSAGE);
                         }
                     } else {
                         if (actionEvent.getSource().equals(vista.getjButton7())) {
                             if (filasel != -1 && (!nom.equals("") || !cognom.equals(""))) {
-                                odb.modificarActor(id, nom, cognom);
+                                ArrayList<TaulaActors> afins=new ArrayList<>();
+                                if(vista.getjList1().getModel().getSize()!=0){
+                                    DefaultListModel lm=(DefaultListModel)vista.getjList1().getModel();
+                                    for (int i = 0; i < lm.getSize(); i++) {
+                                        TaulaActors element = (TaulaActors)lm.getElementAt(i);
+                                        afins.add(element);    
+                                    }
+                                }
+                                odb.modificarActor(id, nom, cognom, afins);
                                 borrarCamps();
-                                carregaTaula(odb.llistarActors(), TaulaActors.class);
+                                ArrayList<TaulaActors> llista=odb.llistarActors();
+                                carregaTaula(llista, TaulaActors.class);
+                                vista.getjComboBox1().setModel(new DefaultComboBoxModel(llista.toArray()));
                             } else {
                                 JOptionPane.showMessageDialog(null, "Per modificar un actor primer l'has de seleccionar i posar algun valor al nom i/o cognoms!!", "Error", JOptionPane.ERROR_MESSAGE);
                             }
                         } else {
-                            try {
-                                odb.finalize();
-                            } catch (Throwable ex) {
-                                System.out.println("Error tancant la base de dades!!");
+                            //Botó d'afegir actor a la llista d'afins
+                            if (actionEvent.getSource().equals(vista.getjButton2())) {
+                                if (!hasElement(vista.getjComboBox1().getSelectedItem(), vista.getjList1())) {
+                                    DefaultListModel lm=(DefaultListModel)vista.getjList1().getModel();
+                                    lm.addElement(vista.getjComboBox1().getSelectedItem());
+                                    vista.getjList1().setModel(lm);
+                                } else {
+                                    JOptionPane.showMessageDialog(null, "L'actor ja està a la llista d'afins!!", "Error", JOptionPane.ERROR_MESSAGE);
+                                }
+                            } else {
+                                //Botó d'eliminar actors de la llista d'afins
+                                if (actionEvent.getSource().equals(vista.getjButton1())) {
+                                    DefaultListModel lm=(DefaultListModel)vista.getjList1().getModel();
+                                    lm.removeElement(lm.getElementAt(vista.getjList1().getSelectedIndex()));
+                                    vista.getjList1().setModel(lm);
+                                    vista.getjButton1().setEnabled(false);
+                                }
+                                else
+                                    //Botó de sortir de l'aplicació
+                                    if(actionEvent.getSource().equals(vista.getjButton4())){
+                                    try {
+                                        odb.finalize();
+                                    } catch (Throwable ex) {
+                                        System.out.println("Error tancant la base de dades!!");
+                                    }
+                                    System.exit(0);
+                                }
                             }
-                            System.exit(0);
                         }
                     }
                 }
             }
         };
+        vista.getjButton1().addActionListener(actionListener);
+        vista.getjButton2().addActionListener(actionListener);
         vista.getjButton4().addActionListener(actionListener);
         vista.getjButton5().addActionListener(actionListener);
         vista.getjButton6().addActionListener(actionListener);
         vista.getjButton7().addActionListener(actionListener);
 
-        MouseAdapter mouseAdapter = new MouseAdapter() {
+        MouseAdapter mouseAdapterJTable = new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e); //To change body of generated methods, choose Tools | Templates.
-
                 try {
                     filasel = vista.getjTable2().getSelectedRow();
                     if (filasel != -1) {
@@ -237,6 +304,13 @@ public class Controlador {
                         vista.getjTextField1().setText(nom);
                         cognom = (String) vista.getjTable2().getValueAt(filasel, 2);
                         vista.getjTextField2().setText(cognom);
+                        
+                        //Omplim la llista d'actors afins
+                        vista.getjList1().setModel(new DefaultListModel());
+                        DefaultListModel lm=(DefaultListModel)vista.getjList1().getModel();
+                        for (TaulaActors t:(ArrayList<TaulaActors>)vista.getjTable2().getValueAt(filasel, 3)) {
+                                    lm.addElement(t);    
+                        }
                     } else {
                         borrarCamps();
                     }
@@ -245,7 +319,18 @@ public class Controlador {
             }
 
         };
-        vista.getjTable2().addMouseListener(mouseAdapter);
+        vista.getjTable2().addMouseListener(mouseAdapterJTable);
+
+        MouseAdapter mouseAdapterJList = new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                super.mouseClicked(e); //To change body of generated methods, choose Tools | Templates.
+                int filasel =vista.getjList1().getSelectedIndex();
+                vista.getjButton1().setEnabled(filasel != -1);
+            }
+
+        };
+        vista.getjList1().addMouseListener(mouseAdapterJList);
 
         FocusAdapter focusAdapter = new FocusAdapter() {
             @Override
@@ -315,11 +400,6 @@ class ModelCanvisBD extends DefaultTableModel {
     private ObjectContainer resultSet = null;
     private int columnaID;
 
-    //El paràmetre ResultSet rs ha de ser el que hem usat per extreure les dades mostrades a la jTable, ha de ser del tipus actualitzable (CONCUR_UPDATABLE) 
-    //sinó provoca una excepció i ha d'estar obert, tant ell com l'statement que el genera
-    //Exemple:
-    //statement = JFramePrincipal.con.createStatement(ResultSet.TYPE_SCROLL_SENSITIVE, ResultSet.CONCUR_UPDATABLE);
-    //resultSet = statement.executeQuery(sql);    
     //El paràmetre colID indica quina columna del DefaultTableModel conté l'objecte mostrat a la fila de la taula
     public ModelCanvisBD(Vector data, Vector columnNames, ObjectContainer rs, int colID) {
         super(data, columnNames);
@@ -364,5 +444,11 @@ class ModelCanvisBD extends DefaultTableModel {
         }
         );
 
+    }
+
+    @Override
+    public boolean isCellEditable(int row, int column) {
+        //permitim editar des de la taula totes les columnes excepte la que conté una col·lecció
+        return column!=3; //To change body of generated methods, choose Tools | Templates.
     }
 }

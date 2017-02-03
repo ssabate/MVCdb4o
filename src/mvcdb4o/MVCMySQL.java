@@ -4,11 +4,11 @@
  * and open the template in the editor.
  */
 
-package mvcmysql;
+package mvcdb4o;
 
-import mvcmysql.view.VistaActors;
-import mvcmysql.model.Model;
-import mvcmysql.controller.Controlador;
+import mvcdb4o.view.VistaActors;
+import mvcdb4o.model.Model;
+import mvcdb4o.controller.Controlador;
 
 /**
  *
